@@ -1,39 +1,7 @@
 #include <string>
 #include <utility>
+#include "tokens.h"
 
-enum struct TokenType {
-    ILLEGAL,
-    EOF_,
-    ASSIGN,
-    EQ,
-    NOT_EQ,
-    IDENT,
-    INT,
-    PLUS,
-    COMMA,
-    SEMICOLON,
-    COLON,
-    MINUS,
-    BANG,
-    SLASH,
-    ASTERISK,
-    LT,
-    GT,
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
-    LBRACKET,
-    RBRACKET,
-    FUNCTION,
-    LET,
-    TRUE,
-    FALSE,
-    IF,
-    ELSE,
-    RETURN,
-    STRING,
-};
 
 TokenType lookupIdent(const std::string &literal) {
     if (literal == "fn") return TokenType::FUNCTION;
@@ -46,13 +14,9 @@ TokenType lookupIdent(const std::string &literal) {
     return TokenType::IDENT;
 }
 
-struct Token {
-    Token(const TokenType tokenType, std::string literal) : tokenType{tokenType}, literal{std::move(literal)} {
-    }
 
-    Token(const TokenType tokenType, const char ch) : tokenType{tokenType}, literal{ch} {
-    }
+Token::Token(const TokenType tokenType, std::string literal) : tokenType{tokenType}, literal{std::move(literal)} {
+}
 
-    TokenType tokenType;
-    std::string literal;
-};
+Token::Token(const TokenType tokenType, const char ch) : tokenType{tokenType}, literal{ch} {
+}
