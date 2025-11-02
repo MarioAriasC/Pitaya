@@ -15,14 +15,11 @@ set(Boost_USE_STATIC_LIBS OFF)
 #message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 #message(STATUS "Boost_LIBRARIES: ${Boost_LIBRARIES}")
 #message(STATUS "Boost_VERSION: ${Boost_VERSION}")
+include_directories(Pitaya_lib)
+add_subdirectory(Pitaya_lib)
 
 include_directories(${Boost_INCLUDE_DIRS})
 
-add_executable(Pitaya main.cpp
-        tokens.cpp
-        lexer.cpp
-        tokens.h
-        parser.cpp
-        parser.h
-        lexer.h)
+add_executable(Pitaya main.cpp)
 add_subdirectory(Boost_tests)
+

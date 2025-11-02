@@ -3,16 +3,18 @@
 #include "tokens.h"
 #include "lexer.h"
 
+#include <algorithm>
+
 namespace LexerUtil {
     bool is_identifier(const char c) {
         return std::isalpha(c) || c == '_';
     }
 
     bool is_whitespace(const char c) {
-        for (const char &whitespace: WHITESPACES) {
-            if (whitespace == c) return true;
-        }
-        return false;
+        return std::ranges::any_of(WHITESPACES,
+                                   [c](const char &whitespace) {
+                                       return whitespace == c;
+                                   });
     }
 }
 
@@ -78,6 +80,9 @@ Token *Lexer::nextToken() {
         case ZERO:
             r = new Token(TokenType::EOF_, "");
             break;
+        case '"':
+            r = new Token(TokenType::STRING, readString());
+            break;
         default:
             if (LexerUtil::is_identifier(ch)) {
                 const auto identifier = readIdentifier();
@@ -122,7 +127,7 @@ std::string Lexer::readString() {
             break;
         }
     }
-    return input.substr(start, position);
+    return input.substr(start, position - start);
 }
 
 void Lexer::skipWhitespaces() {
@@ -160,5 +165,5 @@ std::string Lexer::readValue(Fn predicate) {
     while (predicate(ch)) {
         readChar();
     }
-    return input.substr(currentPosition, position);
+    return input.substr(currentPosition, position - currentPosition);
 }

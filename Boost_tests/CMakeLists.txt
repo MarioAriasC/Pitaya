@@ -4,4 +4,4 @@ include_directories (${Boost_INCLUDE_DIRS})
 
 add_executable(Boost_Tests_run lexer_text.cpp)
 target_link_libraries(Boost_Tests_run ${Boost_LIBRARIES})
-target_link_libraries(Boost_Tests_run Pitaya)
+target_link_libraries(Boost_Tests_run Pitaya_lib)
