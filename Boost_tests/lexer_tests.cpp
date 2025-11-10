@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_SUITE(Lexer_suite)
         for (const auto &[fst, snd]: expected) {
             const auto token = lexer->nextToken();
             BOOST_REQUIRE(token->tokenType == fst);
-            BOOST_REQUIRE(token->literal == snd);
+            BOOST_REQUIRE_EQUAL(token->literal, snd);
         }
     }
 
