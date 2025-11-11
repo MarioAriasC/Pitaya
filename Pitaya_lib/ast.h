@@ -1,11 +1,9 @@
 #ifndef PITAYA_AST_H
 #define PITAYA_AST_H
-// #include <ostream>
-// #include <string>
-#include <vector>
-//
-#include <optional>
 
+#include <string>
+#include <vector>
+#include <optional>
 #include "tokens.h"
 
 //
@@ -33,12 +31,10 @@ struct StringValue : Statement {
     const std::string value;
 };
 
-//
 struct Identifier final : StringValue {
     Identifier(const Token &token, const std::string &value);
 };
 
-//
 struct LetStatement : Statement {
     LetStatement(const Token &token, Identifier name, std::optional<Statement *> value);
 
@@ -65,12 +61,18 @@ struct LiteralExpression : Statement {
     const T value;
 };
 
-
 struct IntegerLiteral final : LiteralExpression<long> {
     IntegerLiteral(const Token &token, long value);
 };
 
 struct BooleanLiteral final : LiteralExpression<bool> {
     BooleanLiteral(const Token &token, bool value);
+};
+
+struct PrefixExpression:Statement {
+    PrefixExpression(const Token &token, const std::string &op, std::optional<Statement *> right);
+
+    const std::string op;
+    const std::optional<Statement *> right;
 };
 #endif //PITAYA_AST_H

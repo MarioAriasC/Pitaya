@@ -42,6 +42,7 @@ private:
     std::optional<Statement *> parseIntegerLiteral();
     std::optional<Statement *> parseIdentifier();
     std::optional<Statement *> parseBooleanLiteral();
+    std::optional<Statement *> parsePrefixExpression();
 
 };
 #endif //PITAYA_PARSER_H

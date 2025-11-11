@@ -130,6 +130,9 @@ std::optional<PREFIX_TYPE > Parser::prefixParser(const TokenType tt) {
         case TokenType::TRUE:
         case TokenType::FALSE:
             return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseBooleanLiteral)};
+        case TokenType::BANG:
+        case TokenType::MINUS:
+            return std::optional{static_cast<PREFIX_TYPE>(&Parser::parsePrefixExpression)};
         default:
             return std::nullopt;
     }
@@ -188,4 +191,12 @@ std::optional<Statement *> Parser::parseIdentifier() {
 
 std::optional<Statement *> Parser::parseBooleanLiteral() {
     return std::optional{new BooleanLiteral(*curToken, curTokenIs(TokenType::TRUE))};
+}
+
+std::optional<Statement *> Parser::parsePrefixExpression() {
+    const auto token = curToken;
+    const auto op = token->literal;
+    nextToken();
+    const auto right = parseExpression(Precedence::PREFIX);
+    return std::optional{new PrefixExpression(*token, op, right)};
 }

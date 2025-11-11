@@ -14,7 +14,7 @@ void checkParserErrors(const Parser &parser) {
     }
 }
 
-void countStatement(const int i, const Program &program) {
+void countStatements(const int i, const Program &program) {
     BOOST_REQUIRE_EQUAL(i, program.statements.size());
 }
 
@@ -63,13 +63,13 @@ void testIdentifier(const std::optional<Statement *> expression, const std::stri
 
 #define VARIANT_TYPE std::variant<long, bool, std::string>
 
-void testLiteralExpression(std::optional<Statement *> value, const VARIANT_TYPE &expectedValue) {
-    if (std::holds_alternative<long>(expectedValue)) {
-        testLongLiteral(value, std::get<long>(expectedValue));
-    } else if (std::holds_alternative<bool>(expectedValue)) {
-        testBooleanLiteral(value, std::get<bool>(expectedValue));
-    } else if (std::holds_alternative<std::string>(expectedValue)) {
-        testIdentifier(value, std::get<std::string>(expectedValue));
+void testLiteralExpression(std::optional<Statement *> value, const VARIANT_TYPE &expected_value) {
+    if (std::holds_alternative<long>(expected_value)) {
+        testLongLiteral(value, std::get<long>(expected_value));
+    } else if (std::holds_alternative<bool>(expected_value)) {
+        testBooleanLiteral(value, std::get<bool>(expected_value));
+    } else if (std::holds_alternative<std::string>(expected_value)) {
+        testIdentifier(value, std::get<std::string>(expected_value));
     } else {
         BOOST_FAIL("not implemented");
     }
@@ -83,16 +83,16 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             std::tuple{"let y = true;", "y", true},
             std::tuple{"let foobar = y;", "foobar", "y"}
         };
-        for (auto &[input, expectedIdentifier, expectedValue]: tests) {
+        for (auto &[input, expected_identifier, expected_value]: tests) {
             const auto program = createProgram(input);
-            countStatement(1, *program);
+            countStatements(1, *program);
             const auto statement = program->statements[0];
             BOOST_REQUIRE_EQUAL("let", statement->tokenLiteral());
             const auto let_statement = dynamic_cast<LetStatement *>(statement);
-            BOOST_REQUIRE_EQUAL(expectedIdentifier, let_statement->name.value);
-            BOOST_REQUIRE_EQUAL(expectedIdentifier, let_statement->name.tokenLiteral());
+            BOOST_REQUIRE_EQUAL(expected_identifier, let_statement->name.value);
+            BOOST_REQUIRE_EQUAL(expected_identifier, let_statement->name.tokenLiteral());
             const auto value = let_statement->value;
-            testLiteralExpression(value, expectedValue);
+            testLiteralExpression(value, expected_value);
         }
     }
 
@@ -102,19 +102,19 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             std::tuple{"return true;", true},
             std::tuple{"return foobar;", "foobar"}
         };
-        for (auto &[input, expectedValue]: tests) {
+        for (auto &[input, expected_value]: tests) {
             const auto program = createProgram(input);
-            countStatement(1, *program);
+            countStatements(1, *program);
             const auto return_statement = dynamic_cast<ReturnStatement *>(program->statements[0]);
             BOOST_REQUIRE_EQUAL("return", return_statement->tokenLiteral());
-            testLiteralExpression(return_statement->returnValue, expectedValue);
+            testLiteralExpression(return_statement->returnValue, expected_value);
         }
     }
 
     BOOST_AUTO_TEST_CASE(testIdentifier) {
         const auto input = "foobar";
         const auto program = createProgram(input);
-        countStatement(1, *program);
+        countStatements(1, *program);
         const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
         process(expression_statement->expression, [](Statement *st) {
             const auto identifier = dynamic_cast<Identifier *>(st);
@@ -126,9 +126,29 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
     BOOST_AUTO_TEST_CASE(testIntegerLiteral) {
         const auto input = "5";
         const auto program = createProgram(input);
-        countStatement(1, *program);
+        countStatements(1, *program);
         const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
         testLongLiteral(expression_statement->expression, 5);
+    }
+
+    BOOST_AUTO_TEST_CASE(testPrefixExpressions) {
+        std::initializer_list<std::tuple<std::string, std::string, VARIANT_TYPE > > tests = {
+            std::tuple{"!5;", "!", 5},
+            std::tuple{"-15;", "-", 15},
+            std::tuple{"!true;", "!", true},
+            std::tuple{"!false;", "!", false},
+        };
+
+        for (auto &[input, op, expected_value]: tests) {
+            const auto program = createProgram(input);
+            countStatements(1, *program);
+            const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+            process(expression_statement->expression, [&](Statement *exp) {
+                const auto expression = dynamic_cast<PrefixExpression *>(exp);
+                BOOST_REQUIRE_EQUAL(op, expression->op);
+                testLiteralExpression(expression->right, expected_value);
+            });
+        }
     }
 
 BOOST_AUTO_TEST_SUITE_END()

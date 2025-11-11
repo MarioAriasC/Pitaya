@@ -70,3 +70,8 @@ ExpressionStatement::ExpressionStatement(const Token &token,
 
 BooleanLiteral::BooleanLiteral(const Token &token, const bool value) : LiteralExpression(token, value) {
 }
+
+PrefixExpression::PrefixExpression(const Token &token,
+                                   const std::string &op,
+                                   const std::optional<Statement *> right) : Statement(token), op{op}, right{right} {
+}
