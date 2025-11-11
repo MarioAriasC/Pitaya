@@ -28,7 +28,7 @@ Program *createProgram(std::string input) {
 }
 
 template<typename Fn>
-void process(std::optional<Statement *> o, Fn fn) {
+void process(std::optional<Statement *> o, const Fn &fn) {
     if (o.has_value()) {
         fn(o.value());
     } else {
@@ -38,7 +38,7 @@ void process(std::optional<Statement *> o, Fn fn) {
 
 void testLongLiteral(const std::optional<Statement *> expression, const long l) {
     process(expression, [l](Statement *st) {
-        const auto exp = static_cast<IntegerLiteral *>(st);
+        const auto exp = dynamic_cast<IntegerLiteral *>(st);
         BOOST_REQUIRE_EQUAL(l, exp->value);
         BOOST_REQUIRE_EQUAL(std::to_string(l), exp->tokenLiteral());
     });
@@ -46,16 +46,16 @@ void testLongLiteral(const std::optional<Statement *> expression, const long l) 
 
 void testBooleanLiteral(const std::optional<Statement *> expression, const bool b) {
     process(expression, [b](Statement *st) {
-        const auto exp = static_cast<BooleanLiteral *>(st);
+        const auto exp = dynamic_cast<BooleanLiteral *>(st);
         BOOST_REQUIRE_EQUAL(b, exp->value);
         const auto b_string = b ? "true" : "false";
         BOOST_REQUIRE_EQUAL(b_string, exp->tokenLiteral());
     });
 }
 
-void testIdentifier(const std::optional<Statement *> expression, const std::string s) {
+void testIdentifier(const std::optional<Statement *> expression, const std::string &s) {
     process(expression, [s](Statement *st) {
-        const auto exp = static_cast<Identifier *>(st);
+        const auto exp = dynamic_cast<Identifier *>(st);
         BOOST_REQUIRE_EQUAL(s, exp->value);
         BOOST_REQUIRE_EQUAL(s, exp->tokenLiteral());
     });
@@ -65,11 +65,11 @@ void testIdentifier(const std::optional<Statement *> expression, const std::stri
 
 void testLiteralExpression(std::optional<Statement *> value, const VARIANT_TYPE &expectedValue) {
     if (std::holds_alternative<long>(expectedValue)) {
-        testLongLiteral(std::move(value), std::get<long>(expectedValue));
+        testLongLiteral(value, std::get<long>(expectedValue));
     } else if (std::holds_alternative<bool>(expectedValue)) {
-        testBooleanLiteral(std::move(value), std::get<bool>(expectedValue));
+        testBooleanLiteral(value, std::get<bool>(expectedValue));
     } else if (std::holds_alternative<std::string>(expectedValue)) {
-        testIdentifier(std::move(value), std::get<std::string>(expectedValue));
+        testIdentifier(value, std::get<std::string>(expectedValue));
     } else {
         BOOST_FAIL("not implemented");
     }
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             countStatement(1, *program);
             const auto statement = program->statements[0];
             BOOST_REQUIRE_EQUAL("let", statement->tokenLiteral());
-            const auto let_statement = static_cast<LetStatement *>(statement);
+            const auto let_statement = dynamic_cast<LetStatement *>(statement);
             BOOST_REQUIRE_EQUAL(expectedIdentifier, let_statement->name.value);
             BOOST_REQUIRE_EQUAL(expectedIdentifier, let_statement->name.tokenLiteral());
             const auto value = let_statement->value;
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         for (auto &[input, expectedValue]: tests) {
             const auto program = createProgram(input);
             countStatement(1, *program);
-            const auto return_statement = static_cast<ReturnStatement *>(program->statements[0]);
+            const auto return_statement = dynamic_cast<ReturnStatement *>(program->statements[0]);
             BOOST_REQUIRE_EQUAL("return", return_statement->tokenLiteral());
             testLiteralExpression(return_statement->returnValue, expectedValue);
         }
@@ -115,13 +115,20 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "foobar";
         const auto program = createProgram(input);
         countStatement(1, *program);
-        const auto expression_statement = static_cast<ExpressionStatement *>(program->statements[0]);
+        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
         process(expression_statement->expression, [](Statement *st) {
-            const auto identifier = static_cast<Identifier *>(st);
+            const auto identifier = dynamic_cast<Identifier *>(st);
             BOOST_REQUIRE_EQUAL("foobar", identifier->value);
             BOOST_REQUIRE_EQUAL("foobar", identifier->tokenLiteral());
         });
     }
 
+    BOOST_AUTO_TEST_CASE(testIntegerLiteral) {
+        const auto input = "5";
+        const auto program = createProgram(input);
+        countStatement(1, *program);
+        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        testLongLiteral(expression_statement->expression, 5);
+    }
 
 BOOST_AUTO_TEST_SUITE_END()
