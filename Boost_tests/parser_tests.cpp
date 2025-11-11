@@ -84,9 +84,9 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             std::tuple{"let foobar = y;", "foobar", "y"}
         };
         for (auto &[input, expectedIdentifier, expectedValue]: tests) {
-            auto program = createProgram(input);
+            const auto program = createProgram(input);
             countStatement(1, *program);
-            auto statement = program->statements[0];
+            const auto statement = program->statements[0];
             BOOST_REQUIRE_EQUAL("let", statement->tokenLiteral());
             const auto let_statement = static_cast<LetStatement *>(statement);
             BOOST_REQUIRE_EQUAL(expectedIdentifier, let_statement->name.value);
@@ -95,5 +95,21 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             testLiteralExpression(value, expectedValue);
         }
     }
+
+    BOOST_AUTO_TEST_CASE(testReturnStatement) {
+        std::initializer_list<std::tuple<std::string, VARIANT_TYPE > > tests = {
+            std::tuple{"return 5;", 5},
+            std::tuple{"return true;", true},
+            std::tuple{"return foobar;", "foobar"}
+        };
+        for (auto &[input, expectedValue]: tests) {
+            const auto program = createProgram(input);
+            countStatement(1, *program);
+            const auto return_statement = static_cast<ReturnStatement *>(program->statements[0]);
+            BOOST_REQUIRE_EQUAL("return", return_statement->tokenLiteral());
+            testLiteralExpression(return_statement->returnValue, expectedValue);
+        }
+    }
+
 
 BOOST_AUTO_TEST_SUITE_END()
