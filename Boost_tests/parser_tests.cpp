@@ -111,5 +111,17 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         }
     }
 
+    BOOST_AUTO_TEST_CASE(testIdentifier) {
+        const auto input = "foobar";
+        const auto program = createProgram(input);
+        countStatement(1, *program);
+        const auto expression_statement = static_cast<ExpressionStatement *>(program->statements[0]);
+        process(expression_statement->expression, [](Statement *st) {
+            const auto identifier = static_cast<Identifier *>(st);
+            BOOST_REQUIRE_EQUAL("foobar", identifier->value);
+            BOOST_REQUIRE_EQUAL("foobar", identifier->tokenLiteral());
+        });
+    }
+
 
 BOOST_AUTO_TEST_SUITE_END()
