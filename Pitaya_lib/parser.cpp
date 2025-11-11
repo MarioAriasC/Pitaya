@@ -97,6 +97,10 @@ void Parser::peekError(const TokenType tt) {
     errors.push_back(stream.str());
 }
 
+bool Parser::curTokenIs(const TokenType tt) const {
+    return tt == curToken->tokenType;
+}
+
 std::optional<Statement *> Parser::parseExpression(Precedence precedence) {
     const auto prefix = prefixParser(curToken->tokenType);
     if (!prefix.has_value()) {
@@ -117,12 +121,15 @@ std::optional<Statement *> Parser::parseExpression(Precedence precedence) {
 }
 
 
-std::optional<PREFIX_TYPE > Parser::prefixParser(TokenType tt) {
+std::optional<PREFIX_TYPE > Parser::prefixParser(const TokenType tt) {
     switch (tt) {
         case TokenType::INT:
             return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseIntegerLiteral)};
         case TokenType::IDENT:
             return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseIdentifier)};
+        case TokenType::TRUE:
+        case TokenType::FALSE:
+            return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseBooleanLiteral)};
         default:
             return std::nullopt;
     }
@@ -136,9 +143,9 @@ Parser::infixParser(TokenType tt) {
     }
 }
 
-void Parser::noPrefixParserError(TokenType tt) {
+void Parser::noPrefixParserError(const TokenType tt) {
     std::stringstream stream;
-    stream << "no prefix parser for " << to_string(tt) << " function";
+    stream << "no prefix parser for " << to_string(tt) << " token type";
     errors.push_back(stream.str());
 }
 
@@ -177,4 +184,8 @@ std::optional<Statement *> Parser::parseIntegerLiteral() {
 
 std::optional<Statement *> Parser::parseIdentifier() {
     return std::optional{new Identifier(*curToken, curToken->literal)};
+}
+
+std::optional<Statement *> Parser::parseBooleanLiteral() {
+    return std::optional{new BooleanLiteral(*curToken, curTokenIs(TokenType::TRUE))};
 }

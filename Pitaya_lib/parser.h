@@ -30,6 +30,7 @@ private:
     [[nodiscard]] bool peekTokenIs(TokenType tt) const;
     bool expectPeek(TokenType tt);
     void peekError(TokenType tt);
+    bool curTokenIs(TokenType tt) const;
     std::optional<Statement *> parseExpression(Precedence precedence);
 
     std::optional<PREFIX_TYPE> prefixParser(TokenType tt);
@@ -40,6 +41,7 @@ private:
 
     std::optional<Statement *> parseIntegerLiteral();
     std::optional<Statement *> parseIdentifier();
+    std::optional<Statement *> parseBooleanLiteral();
 
 };
 #endif //PITAYA_PARSER_H

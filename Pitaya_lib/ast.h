@@ -66,7 +66,11 @@ struct LiteralExpression : Statement {
 };
 
 
-struct IntegerLiteral final : LiteralExpression<int> {
-    IntegerLiteral(const Token &token, int value);
+struct IntegerLiteral final : LiteralExpression<long> {
+    IntegerLiteral(const Token &token, long value);
+};
+
+struct BooleanLiteral final : LiteralExpression<bool> {
+    BooleanLiteral(const Token &token, bool value);
 };
 #endif //PITAYA_AST_H

@@ -56,7 +56,7 @@ template<typename T>
 LiteralExpression<T>::LiteralExpression(const Token &token, T value) : Statement(token), value{value} {
 }
 
-IntegerLiteral::IntegerLiteral(const Token &token, const int value) : LiteralExpression(token, value) {
+IntegerLiteral::IntegerLiteral(const Token &token, const long value) : LiteralExpression(token, value) {
 }
 
 ReturnStatement::ReturnStatement(const Token &token, const std::optional<Statement *> &returnValue) : Statement(token),
@@ -66,4 +66,7 @@ ReturnStatement::ReturnStatement(const Token &token, const std::optional<Stateme
 ExpressionStatement::ExpressionStatement(const Token &token,
                                          const std::optional<Statement *> &expression) : Statement(token),
     expression{expression} {
+}
+
+BooleanLiteral::BooleanLiteral(const Token &token, const bool value) : LiteralExpression(token, value) {
 }
