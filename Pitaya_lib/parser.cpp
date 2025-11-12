@@ -101,14 +101,13 @@ bool Parser::curTokenIs(const TokenType tt) const {
     return tt == curToken->tokenType;
 }
 
-std::optional<Statement *> Parser::parseExpression(Precedence precedence) {
+std::optional<Statement *> Parser::parseExpression(const Precedence precedence) {
     const auto prefix = prefixParser(curToken->tokenType);
     if (!prefix.has_value()) {
         noPrefixParserError(curToken->tokenType);
         return std::nullopt;
     }
     auto left = prefix.value()(this);
-    std::optional<Statement> rt = std::nullopt;
     while (!peekTokenIs(TokenType::SEMICOLON) && precedence < peekPrecedence()) {
         const auto infix = infixParser(peekToken->tokenType);
         if (!infix.has_value()) {
@@ -121,26 +120,34 @@ std::optional<Statement *> Parser::parseExpression(Precedence precedence) {
 }
 
 
-std::optional<PREFIX_TYPE > Parser::prefixParser(const TokenType tt) {
+std::optional<PREFIX_FN_TYPE > Parser::prefixParser(const TokenType tt) {
     switch (tt) {
         case TokenType::INT:
-            return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseIntegerLiteral)};
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseIntegerLiteral)};
         case TokenType::IDENT:
-            return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseIdentifier)};
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseIdentifier)};
         case TokenType::TRUE:
         case TokenType::FALSE:
-            return std::optional{static_cast<PREFIX_TYPE>(&Parser::parseBooleanLiteral)};
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseBooleanLiteral)};
         case TokenType::BANG:
         case TokenType::MINUS:
-            return std::optional{static_cast<PREFIX_TYPE>(&Parser::parsePrefixExpression)};
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parsePrefixExpression)};
         default:
             return std::nullopt;
     }
 }
 
-std::optional<boost::function<std::optional<Statement *>(Parser *, std::optional<Statement *>)> >
-Parser::infixParser(TokenType tt) {
+std::optional<INFIX_FN_TYPE > Parser::infixParser(const TokenType tt) {
     switch (tt) {
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::SLASH:
+        case TokenType::ASTERISK:
+        case TokenType::EQ:
+        case TokenType::NOT_EQ:
+        case TokenType::LT:
+        case TokenType::GT:
+            return std::optional{static_cast<INFIX_FN_TYPE>(&Parser::parserInfixExpression)};
         default:
             return std::nullopt;
     }
@@ -179,6 +186,10 @@ Precedence Parser::findPrecedence(const TokenType tt) {
     }
 }
 
+Precedence Parser::currentPrecedence() const {
+    return findPrecedence(curToken->tokenType);
+}
+
 std::optional<Statement *> Parser::parseIntegerLiteral() {
     const auto token = curToken;
     const long value = std::stol(token->literal);
@@ -199,4 +210,13 @@ std::optional<Statement *> Parser::parsePrefixExpression() {
     nextToken();
     const auto right = parseExpression(Precedence::PREFIX);
     return std::optional{new PrefixExpression(*token, op, right)};
+}
+
+std::optional<Statement *> Parser::parserInfixExpression(std::optional<Statement *> left) {
+    const auto token = curToken;
+    const auto op = token->literal;
+    const auto precedence = currentPrecedence();
+    nextToken();
+    const auto right = parseExpression(precedence);
+    return std::optional{new InfixExpression(*token, left, op, right)};
 }

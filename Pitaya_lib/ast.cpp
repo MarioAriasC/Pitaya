@@ -28,28 +28,21 @@ std::string Statement::tokenLiteral() const {
     return token.literal;
 }
 
-//
 Program::Program(const std::vector<Statement *> &statements) : statements{statements} {
 }
 
-//
-//
 StringValue::StringValue(const Token &token, std::string value) : Statement(token), value{std::move(value)} {
 }
 
-//
-//
 std::ostream &operator<<(std::ostream &os, const StringValue &obj) {
     return os << obj.value;
 }
 
-//
 Identifier::Identifier(const Token &token, const std::string &value) : StringValue(token, value) {
 }
 
-//
 LetStatement::LetStatement(const Token &token, Identifier name, std::optional<Statement *> value) : Statement(token),
-    name{name}, value{value} {
+    name{std::move(name)}, value{value} {
 }
 
 template<typename T>
@@ -72,6 +65,17 @@ BooleanLiteral::BooleanLiteral(const Token &token, const bool value) : LiteralEx
 }
 
 PrefixExpression::PrefixExpression(const Token &token,
-                                   const std::string &op,
-                                   const std::optional<Statement *> right) : Statement(token), op{op}, right{right} {
+                                   std::string op,
+                                   const std::optional<Statement *> right) : Statement(token),
+                                                                             op{std::move(op)},
+                                                                             right{right} {
+}
+
+InfixExpression::InfixExpression(const Token &token,
+                                 const std::optional<Statement *> left,
+                                 std::string op,
+                                 const std::optional<Statement *> right) : Statement(token),
+                                                                           left{left},
+                                                                           op{std::move(op)},
+                                                                           right{right} {
 }

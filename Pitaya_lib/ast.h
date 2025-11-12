@@ -69,9 +69,20 @@ struct BooleanLiteral final : LiteralExpression<bool> {
     BooleanLiteral(const Token &token, bool value);
 };
 
-struct PrefixExpression:Statement {
-    PrefixExpression(const Token &token, const std::string &op, std::optional<Statement *> right);
+struct PrefixExpression : Statement {
+    PrefixExpression(const Token &token, std::string op, std::optional<Statement *> right);
 
+    const std::string op;
+    const std::optional<Statement *> right;
+};
+
+struct InfixExpression : Statement {
+    InfixExpression(const Token &token,
+                    std::optional<Statement *> left,
+                    std::string op,
+                    std::optional<Statement *> right);
+
+    const std::optional<Statement *> left;
     const std::string op;
     const std::optional<Statement *> right;
 };

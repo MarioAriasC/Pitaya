@@ -4,7 +4,8 @@
 #include "ast.h"
 #include "lexer.h"
 #include "boost/function.hpp"
-#define PREFIX_TYPE boost::function<std::optional<Statement *> (Parser *)>
+#define PREFIX_FN_TYPE boost::function<std::optional<Statement *> (Parser *)>
+#define INFIX_FN_TYPE boost::function<std::optional<Statement *> (Parser *, std::optional<Statement *>)>
 
 enum struct Precedence {
     LOWEST, EQUALS, LESS_GREATER, SUM, PRODUCT, PREFIX, CALL, INDEX
@@ -12,7 +13,9 @@ enum struct Precedence {
 
 struct Parser {
     explicit Parser(Lexer lexer);
+
     std::vector<std::string> errors;
+
     Program *parseProgram();
 
 private:
@@ -22,27 +25,47 @@ private:
     Token *peekToken;
 
     void nextToken();
+
     std::optional<Statement *> parseStatement();
 
     std::optional<Statement *> parseLetStatement();
+
     std::optional<Statement *> parseReturnStatement();
+
     std::optional<Statement *> parseExpressionStatement();
+
     [[nodiscard]] bool peekTokenIs(TokenType tt) const;
+
     bool expectPeek(TokenType tt);
+
     void peekError(TokenType tt);
-    bool curTokenIs(TokenType tt) const;
+
+    [[nodiscard]] bool curTokenIs(TokenType tt) const;
+
     std::optional<Statement *> parseExpression(Precedence precedence);
 
-    std::optional<PREFIX_TYPE> prefixParser(TokenType tt);
-    std::optional<boost::function<std::optional<Statement *>(Parser *, std::optional<Statement *>)>> infixParser(TokenType tt);
+    std::optional<PREFIX_FN_TYPE > prefixParser(TokenType tt);
+
+    std::optional<boost::function<std::optional<Statement *>(Parser *, std::optional<Statement *>)> >
+    infixParser(TokenType tt);
+
     void noPrefixParserError(TokenType tt);
-    Precedence peekPrecedence() const;
+
+    [[nodiscard]] Precedence peekPrecedence() const;
+
     static Precedence findPrecedence(TokenType tt);
 
-    std::optional<Statement *> parseIntegerLiteral();
-    std::optional<Statement *> parseIdentifier();
-    std::optional<Statement *> parseBooleanLiteral();
-    std::optional<Statement *> parsePrefixExpression();
+    Precedence currentPrecedence() const;
 
+    // prefix parsers
+    std::optional<Statement *> parseIntegerLiteral();
+
+    std::optional<Statement *> parseIdentifier();
+
+    std::optional<Statement *> parseBooleanLiteral();
+
+    std::optional<Statement *> parsePrefixExpression();
+    // infix parsers
+    std::optional<Statement *> parserInfixExpression(std::optional<Statement *> left);
 };
 #endif //PITAYA_PARSER_H

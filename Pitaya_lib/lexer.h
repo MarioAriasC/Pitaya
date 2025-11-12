@@ -34,7 +34,7 @@ private:
 
     void skipWhitespaces();
 
-    Token *token(TokenType tokenType) const;
+    [[nodiscard]] Token *token(TokenType tokenType) const;
 
     char peakChar();
 

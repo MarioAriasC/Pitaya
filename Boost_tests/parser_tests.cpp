@@ -63,7 +63,7 @@ void testIdentifier(const std::optional<Statement *> expression, const std::stri
 
 #define VARIANT_TYPE std::variant<long, bool, std::string>
 
-void testLiteralExpression(std::optional<Statement *> value, const VARIANT_TYPE &expected_value) {
+void testLiteralExpression(const std::optional<Statement *> value, const VARIANT_TYPE &expected_value) {
     if (std::holds_alternative<long>(expected_value)) {
         testLongLiteral(value, std::get<long>(expected_value));
     } else if (std::holds_alternative<bool>(expected_value)) {
@@ -75,6 +75,17 @@ void testLiteralExpression(std::optional<Statement *> value, const VARIANT_TYPE 
     }
 }
 
+void testInfixExpression(const std::optional<Statement *> expression,
+                         const VARIANT_TYPE left_value,
+                         std::string op,
+                         const VARIANT_TYPE right_value) {
+    process(expression, [&](Statement *st) {
+        const auto exp = dynamic_cast<InfixExpression *>(st);
+        testLiteralExpression(exp->left, left_value);
+        BOOST_REQUIRE_EQUAL(op, exp->op);
+        testLiteralExpression(exp->right, right_value);
+    });
+}
 
 BOOST_AUTO_TEST_SUITE(Parser_suite)
     BOOST_AUTO_TEST_CASE(testLetStatements) {
@@ -147,6 +158,30 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
                 const auto expression = dynamic_cast<PrefixExpression *>(exp);
                 BOOST_REQUIRE_EQUAL(op, expression->op);
                 testLiteralExpression(expression->right, expected_value);
+            });
+        }
+    }
+
+    BOOST_AUTO_TEST_CASE(testInfixExpressions) {
+        std::initializer_list<std::tuple<std::string, VARIANT_TYPE, std::string, VARIANT_TYPE > > tests = {
+            std::tuple{"5 + 5;", 5, "+", 5},
+            std::tuple{"5 - 5;", 5, "-", 5},
+            std::tuple{"5 * 5;", 5, "*", 5},
+            std::tuple{"5 / 5;", 5, "/", 5},
+            std::tuple{"5 > 5;", 5, ">", 5},
+            std::tuple{"5 < 5;", 5, "<", 5},
+            std::tuple{"5 == 5;", 5, "==", 5},
+            std::tuple{"5 != 5;", 5, "!=", 5},
+            std::tuple{"true == true", true, "==", true},
+            std::tuple{"true != false", true, "!=", false},
+            std::tuple{"false == false", false, "==", false},
+        };
+        for (auto &[input, left_value, op, right_value]: tests) {
+            const auto program = createProgram(input);
+            countStatements(1, *program);
+            const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+            process(expression_statement->expression, [&](Statement *exp) {
+                testInfixExpression(exp, left_value, op, right_value);
             });
         }
     }
