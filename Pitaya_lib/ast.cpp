@@ -26,9 +26,10 @@ namespace ASTUtil {
         }).value_or("");
     }
 
-    std::string join_to_string(OPT_STATEMENT_LIST l, std::string separator) {
+    std::string join_to_string(OPT_STATEMENT_LIST l, const std::string &separator) {
         return l.transform([separator](const std::vector<std::optional<Statement *> > &ll) {
             std::vector<std::string> sts{};
+            sts.reserve(ll.size());
             for (const auto statement: ll) {
                 sts.push_back(to_string(statement));
             }
@@ -183,5 +184,29 @@ IndexExpression::IndexExpression(const Token &token,
 std::string IndexExpression::to_string() const {
     std::stringstream ss;
     ss << "(" << ASTUtil::to_string(left) << "[" << ASTUtil::to_string(index) << "])";
+    return ss.str();
+}
+
+BlockStatement::BlockStatement(const Token &token, const OPT_STATEMENT_LIST &statements) : Statement(token),
+    statements{statements} {
+}
+
+std::string BlockStatement::to_string() const {
+    return ASTUtil::join_to_string(statements, "");
+}
+
+IfExpression::IfExpression(const Token &token,
+                           const std::optional<Statement *> condition,
+                           const std::optional<BlockStatement *> consequence,
+                           const std::optional<BlockStatement *> alternative) : Statement(token), condition{condition},
+    consequence{consequence}, alternative{alternative} {
+}
+
+std::string IfExpression::to_string() const {
+    std::stringstream ss;
+    ss << "if " << ASTUtil::to_string(condition) << " " << ASTUtil::to_string(consequence);
+    if (alternative.has_value()) {
+        ss << " else " << ASTUtil::to_string(alternative);
+    }
     return ss.str();
 }

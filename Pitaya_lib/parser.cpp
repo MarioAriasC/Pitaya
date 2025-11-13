@@ -136,6 +136,8 @@ std::optional<PREFIX_FN_TYPE > Parser::prefixParser(const TokenType tt) {
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseGroupExpression)};
         case TokenType::LBRACKET:
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseArrayLiteral)};
+        case TokenType::IF:
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseIfExpression)};
         default:
             return std::nullopt;
     }
@@ -217,6 +219,19 @@ std::optional<std::vector<std::optional<Statement *> > > Parser::parseExpression
     return std::optional{arguments};
 }
 
+BlockStatement *Parser::parseBlockStatement() {
+    const auto token = curToken;
+    auto statements = std::vector<std::optional<Statement *> >{};
+    nextToken();
+    while (!curTokenIs(TokenType::RBRACE) && !curTokenIs(TokenType::EOF_)) {
+        if (const auto statement = parseStatement(); statement.has_value()) {
+            statements.push_back(statement);
+        }
+        nextToken();
+    }
+    return std::move(new BlockStatement{*token, std::optional{statements}});
+}
+
 std::optional<Statement *> Parser::parseIntegerLiteral() {
     const auto token = curToken;
     const long value = std::stol(token->literal);
@@ -251,6 +266,31 @@ std::optional<Statement *> Parser::parseGroupExpression() {
 std::optional<Statement *> Parser::parseArrayLiteral() {
     const auto token = curToken;
     return std::optional{new ArrayLiteral{*token, parseExpressionList(TokenType::RBRACKET)}};
+}
+
+std::optional<Statement *> Parser::parseIfExpression() {
+    const auto token = curToken;
+    if (!expectPeek(TokenType::LPAREN)) {
+        return std::nullopt;
+    }
+    nextToken();
+    const auto condition = parseExpression(Precedence::LOWEST);
+    if (!expectPeek(TokenType::RPAREN)) {
+        return std::nullopt;
+    }
+    if (!expectPeek(TokenType::LBRACE)) {
+        return std::nullopt;
+    }
+    const auto consequence = parseBlockStatement();
+    std::optional<BlockStatement *> alternative = std::nullopt;
+    if (peekTokenIs(TokenType::ELSE)) {
+        nextToken();
+        if (!expectPeek(TokenType::LBRACE)) {
+            return std::nullopt;
+        }
+        alternative.emplace(parseBlockStatement());
+    }
+    return std::optional{new IfExpression{*token, condition, consequence, alternative}};
 }
 
 std::optional<Statement *> Parser::parseInfixExpression(const std::optional<Statement *> left) {

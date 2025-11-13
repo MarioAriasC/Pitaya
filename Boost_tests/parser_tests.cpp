@@ -41,6 +41,16 @@ void process(std::optional<Statement *> o, const Fn &fn) {
     }
 }
 
+template<typename T, typename Fn>
+void processT(const std::optional<T *> o, const Fn &fn) {
+    if (o.has_value()) {
+        fn(o.value());
+    } else {
+        BOOST_FAIL("none value");
+    }
+}
+
+
 void testLongLiteral(const std::optional<Statement *> expression, const long l) {
     process(expression, [l](Statement *st) {
         const auto exp = dynamic_cast<IntegerLiteral *>(st);
@@ -80,9 +90,9 @@ void testLiteralExpression(const std::optional<Statement *> value, const VARIANT
 }
 
 void testInfixExpression(const std::optional<Statement *> expression,
-                         const VARIANT_TYPE left_value,
-                         std::string op,
-                         const VARIANT_TYPE right_value) {
+                         const VARIANT_TYPE &left_value,
+                         const std::string &op,
+                         const VARIANT_TYPE &right_value) {
     process(expression, [&](Statement *st) {
         const auto exp = dynamic_cast<InfixExpression *>(st);
         testLiteralExpression(exp->left, left_value);
@@ -126,7 +136,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         }
     }
 
-    BOOST_AUTO_TEST_CASE(testIdentifier) {
+    BOOST_AUTO_TEST_CASE(testIdentifierLiteral) {
         const auto input = "foobar";
         const auto program = createProgram(input);
         countStatements(1, *program);
@@ -238,6 +248,29 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
             testBooleanLiteral(expression_statement->expression, expected_value);
         }
+    }
+
+    BOOST_AUTO_TEST_CASE(testIfExpression) {
+        const auto input = "if (x < y) {x}";
+        const auto program = createProgram(input);
+        countStatements(1, *program);
+        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        process(expression_statement->expression, [](Statement *st) {
+            const auto exp = dynamic_cast<IfExpression *>(st);
+            testInfixExpression(exp->condition, "x", "<", "y");
+            processT(exp->consequence, [](const BlockStatement *consequenceBlk) {
+                if (const auto statements = consequenceBlk->statements; statements.has_value()) {
+                    const auto &sts = statements.value();
+                    BOOST_REQUIRE_EQUAL(1, sts.size());
+                    process(sts[0], [](Statement *cons_st) {
+                        const auto consequence = dynamic_cast<ExpressionStatement *>(cons_st);
+                        testIdentifier(consequence->expression, "x");
+                    });
+                } else {
+                    BOOST_FAIL("statements is empty");
+                }
+            });
+        });
     }
 
 BOOST_AUTO_TEST_SUITE_END()

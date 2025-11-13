@@ -135,4 +135,25 @@ struct IndexExpression : Statement {
     const std::optional<Statement *> left;
     const std::optional<Statement *> index;
 };
+
+struct BlockStatement : Statement {
+    BlockStatement(const Token &token, const OPT_STATEMENT_LIST &statements);
+
+    [[nodiscard]] std::string to_string() const override;
+
+    const OPT_STATEMENT_LIST statements;
+};
+
+struct IfExpression : Statement {
+    IfExpression(const Token &token,
+                 std::optional<Statement *> condition,
+                 std::optional<BlockStatement *> consequence,
+                 std::optional<BlockStatement *> alternative);
+
+    [[nodiscard]] std::string to_string() const override;
+
+    const std::optional<Statement *> condition;
+    const std::optional<BlockStatement *> consequence;
+    const std::optional<BlockStatement *> alternative;
+};
 #endif //PITAYA_AST_H

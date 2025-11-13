@@ -59,6 +59,8 @@ private:
 
     std::optional<std::vector<std::optional<Statement *> > > parseExpressionList(TokenType end);
 
+    BlockStatement* parseBlockStatement();
+
     // prefix parsers
     std::optional<Statement *> parseIntegerLiteral();
 
@@ -71,6 +73,8 @@ private:
     std::optional<Statement *> parseGroupExpression();
 
     std::optional<Statement *> parseArrayLiteral();
+
+    std::optional<Statement *> parseIfExpression();
 
     // infix parsers
     std::optional<Statement *> parseInfixExpression(std::optional<Statement *> left);
