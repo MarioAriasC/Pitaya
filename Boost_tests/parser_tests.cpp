@@ -32,15 +32,6 @@ Program *createProgram(std::string input) {
     return program;
 }
 
-template<typename Fn>
-void process(std::optional<Statement *> o, const Fn &fn) {
-    if (o.has_value()) {
-        fn(o.value());
-    } else {
-        BOOST_FAIL("none value");
-    }
-}
-
 template<typename T, typename Fn>
 void processT(const std::optional<T *> o, const Fn &fn) {
     if (o.has_value()) {
@@ -48,6 +39,11 @@ void processT(const std::optional<T *> o, const Fn &fn) {
     } else {
         BOOST_FAIL("none value");
     }
+}
+
+template<typename Fn>
+void process(std::optional<Statement *> o, const Fn &fn) {
+    processT(o, fn);
 }
 
 
@@ -100,6 +96,22 @@ void testInfixExpression(const std::optional<Statement *> expression,
         testLiteralExpression(exp->right, right_value);
     });
 }
+
+void testBlockStatement(const std::optional<BlockStatement *> blk, const std::string &identifier_name) {
+    processT(blk, [&](const BlockStatement *consequenceBlk) {
+        if (const auto statements = consequenceBlk->statements; statements.has_value()) {
+            const auto &sts = statements.value();
+            BOOST_REQUIRE_EQUAL(1, sts.size());
+            process(sts[0], [&](Statement *cons_st) {
+                const auto consequence = dynamic_cast<ExpressionStatement *>(cons_st);
+                testIdentifier(consequence->expression, identifier_name);
+            });
+        } else {
+            BOOST_FAIL("statements is empty");
+        }
+    });
+}
+
 
 BOOST_AUTO_TEST_SUITE(Parser_suite)
     BOOST_AUTO_TEST_CASE(testLetStatements) {
@@ -258,18 +270,21 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         process(expression_statement->expression, [](Statement *st) {
             const auto exp = dynamic_cast<IfExpression *>(st);
             testInfixExpression(exp->condition, "x", "<", "y");
-            processT(exp->consequence, [](const BlockStatement *consequenceBlk) {
-                if (const auto statements = consequenceBlk->statements; statements.has_value()) {
-                    const auto &sts = statements.value();
-                    BOOST_REQUIRE_EQUAL(1, sts.size());
-                    process(sts[0], [](Statement *cons_st) {
-                        const auto consequence = dynamic_cast<ExpressionStatement *>(cons_st);
-                        testIdentifier(consequence->expression, "x");
-                    });
-                } else {
-                    BOOST_FAIL("statements is empty");
-                }
-            });
+            testBlockStatement(exp->consequence, "x");
+            BOOST_REQUIRE(exp->alternative == std::nullopt);
+        });
+    }
+
+    BOOST_AUTO_TEST_CASE(testIfElseExpression) {
+        const auto input = "if (x < y) {x} else {y}";
+        const auto program = createProgram(input);
+        countStatements(1, *program);
+        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        process(expression_statement->expression, [](Statement *st) {
+            const auto exp = dynamic_cast<IfExpression *>(st);
+            testInfixExpression(exp->condition, "x", "<", "y");
+            testBlockStatement(exp->consequence, "x");
+            testBlockStatement(exp->alternative, "y");
         });
     }
 
