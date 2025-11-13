@@ -132,6 +132,10 @@ std::optional<PREFIX_FN_TYPE > Parser::prefixParser(const TokenType tt) {
         case TokenType::BANG:
         case TokenType::MINUS:
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parsePrefixExpression)};
+        case TokenType::LPAREN:
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseGroupExpression)};
+        case TokenType::LBRACKET:
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseArrayLiteral)};
         default:
             return std::nullopt;
     }
@@ -147,7 +151,11 @@ std::optional<INFIX_FN_TYPE > Parser::infixParser(const TokenType tt) {
         case TokenType::NOT_EQ:
         case TokenType::LT:
         case TokenType::GT:
-            return std::optional{static_cast<INFIX_FN_TYPE>(&Parser::parserInfixExpression)};
+            return std::optional{static_cast<INFIX_FN_TYPE>(&Parser::parseInfixExpression)};
+        case TokenType::LPAREN:
+            return std::optional{static_cast<INFIX_FN_TYPE>(&Parser::parseCallExpression)};
+        case TokenType::LBRACKET:
+            return std::optional{static_cast<INFIX_FN_TYPE>(&Parser::parseIndexExpression)};
         default:
             return std::nullopt;
     }
@@ -190,6 +198,25 @@ Precedence Parser::currentPrecedence() const {
     return findPrecedence(curToken->tokenType);
 }
 
+std::optional<std::vector<std::optional<Statement *> > > Parser::parseExpressionList(const TokenType end) {
+    auto arguments = std::vector<std::optional<Statement *> >{};
+    if (peekTokenIs(end)) {
+        nextToken();
+        return std::optional{arguments};
+    }
+    nextToken();
+    arguments.push_back(parseExpression(Precedence::LOWEST));
+    while (peekTokenIs(TokenType::COMMA)) {
+        nextToken();
+        nextToken();
+        arguments.push_back(parseExpression(Precedence::LOWEST));
+    }
+    if (!expectPeek(end)) {
+        return std::nullopt;
+    }
+    return std::optional{arguments};
+}
+
 std::optional<Statement *> Parser::parseIntegerLiteral() {
     const auto token = curToken;
     const long value = std::stol(token->literal);
@@ -212,11 +239,41 @@ std::optional<Statement *> Parser::parsePrefixExpression() {
     return std::optional{new PrefixExpression(*token, op, right)};
 }
 
-std::optional<Statement *> Parser::parserInfixExpression(std::optional<Statement *> left) {
+std::optional<Statement *> Parser::parseGroupExpression() {
+    nextToken();
+    const auto exp = parseExpression(Precedence::LOWEST);
+    if (!expectPeek(TokenType::RPAREN)) {
+        return std::nullopt;
+    }
+    return exp;
+}
+
+std::optional<Statement *> Parser::parseArrayLiteral() {
+    const auto token = curToken;
+    return std::optional{new ArrayLiteral{*token, parseExpressionList(TokenType::RBRACKET)}};
+}
+
+std::optional<Statement *> Parser::parseInfixExpression(std::optional<Statement *> left) {
     const auto token = curToken;
     const auto op = token->literal;
     const auto precedence = currentPrecedence();
     nextToken();
     const auto right = parseExpression(precedence);
     return std::optional{new InfixExpression(*token, left, op, right)};
+}
+
+std::optional<Statement *> Parser::parseCallExpression(std::optional<Statement *> left) {
+    const auto token = curToken;
+    const auto arguments = parseExpressionList(TokenType::RPAREN);
+    return std::optional{new CallExpression(*token, left, arguments)};
+}
+
+std::optional<Statement *> Parser::parseIndexExpression(std::optional<Statement *> left) {
+    const auto token = curToken;
+    nextToken();
+    const auto index = parseExpression(Precedence::LOWEST);
+    if (!expectPeek(TokenType::RBRACKET)) {
+        return std::nullopt;
+    }
+    return std::optional{new IndexExpression{*token, left, index}};
 }

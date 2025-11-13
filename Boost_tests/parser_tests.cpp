@@ -4,9 +4,14 @@
 #include <boost/algorithm/string/join.hpp>
 #include <utility>
 #include <variant>
+#include <iostream>
 
 #include "parser.h"
 
+
+std::string to_string_b(const bool b) {
+    return b ? "true" : "false";
+}
 
 void checkParserErrors(const Parser &parser) {
     if (const auto errors = parser.errors; !errors.empty()) {
@@ -48,8 +53,7 @@ void testBooleanLiteral(const std::optional<Statement *> expression, const bool 
     process(expression, [b](Statement *st) {
         const auto exp = dynamic_cast<BooleanLiteral *>(st);
         BOOST_REQUIRE_EQUAL(b, exp->value);
-        const auto b_string = b ? "true" : "false";
-        BOOST_REQUIRE_EQUAL(b_string, exp->tokenLiteral());
+        BOOST_REQUIRE_EQUAL(to_string_b(b), exp->tokenLiteral());
     });
 }
 
@@ -183,6 +187,42 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             process(expression_statement->expression, [&](Statement *exp) {
                 testInfixExpression(exp, left_value, op, right_value);
             });
+        }
+    }
+
+    BOOST_AUTO_TEST_CASE(testOperatorPrecedence) {
+        const auto tests = {
+            std::tuple{"-a * b", "((-a) * b)"},
+            std::tuple{"!-a", "(!(-a))"},
+            std::tuple{"a + b + c", "((a + b) + c)"},
+            std::tuple{"a + b - c", "((a + b) - c)"},
+            std::tuple{"a * b * c", "((a * b) * c)"},
+            std::tuple{"a * b / c", "((a * b) / c)"},
+            std::tuple{"a + b / c", "(a + (b / c))"},
+            std::tuple{"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
+            std::tuple{"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
+            std::tuple{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
+            std::tuple{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
+            std::tuple{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+            std::tuple{"true", "true"},
+            std::tuple{"false", "false"},
+            std::tuple{"3 > 5 == false", "((3 > 5) == false)"},
+            std::tuple{"3 < 5 == true", "((3 < 5) == true)"},
+            std::tuple{"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
+            std::tuple{"(5 + 5) * 2", "((5 + 5) * 2)"},
+            std::tuple{"2 / (5 + 5)", "(2 / (5 + 5))"},
+            std::tuple{"(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"},
+            std::tuple{"-(5 + 5)", "(-(5 + 5))"},
+            std::tuple{"!(true == true)", "(!(true == true))"},
+            std::tuple{"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+            std::tuple{"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+            std::tuple{"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
+            std::tuple{"a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"},
+            std::tuple{"add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))"},
+        };
+        for (auto &[input, expected]: tests) {
+            const auto program = createProgram(input);
+            BOOST_REQUIRE_EQUAL(program->to_string(), expected);
         }
     }
 

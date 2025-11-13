@@ -55,7 +55,9 @@ private:
 
     static Precedence findPrecedence(TokenType tt);
 
-    Precedence currentPrecedence() const;
+    [[nodiscard]] Precedence currentPrecedence() const;
+
+    std::optional<std::vector<std::optional<Statement *> > > parseExpressionList(TokenType end);
 
     // prefix parsers
     std::optional<Statement *> parseIntegerLiteral();
@@ -65,7 +67,16 @@ private:
     std::optional<Statement *> parseBooleanLiteral();
 
     std::optional<Statement *> parsePrefixExpression();
+
+    std::optional<Statement *> parseGroupExpression();
+
+    std::optional<Statement *> parseArrayLiteral();
+
     // infix parsers
-    std::optional<Statement *> parserInfixExpression(std::optional<Statement *> left);
+    std::optional<Statement *> parseInfixExpression(std::optional<Statement *> left);
+
+    std::optional<Statement *> parseCallExpression(std::optional<Statement *> left);
+
+    std::optional<Statement *> parseIndexExpression(std::optional<Statement *> left);
 };
 #endif //PITAYA_PARSER_H
