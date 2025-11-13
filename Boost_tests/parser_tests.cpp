@@ -226,4 +226,18 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         }
     }
 
+    BOOST_AUTO_TEST_CASE(testBooleanExpressions) {
+        const auto tests = {
+            std::tuple{"true", true},
+            std::tuple{"false", false},
+        };
+
+        for (auto &[input, expected_value]: tests) {
+            const auto program = createProgram(input);
+            countStatements(1, *program);
+            const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+            testBooleanLiteral(expression_statement->expression, expected_value);
+        }
+    }
+
 BOOST_AUTO_TEST_SUITE_END()

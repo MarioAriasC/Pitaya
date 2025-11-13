@@ -253,7 +253,7 @@ std::optional<Statement *> Parser::parseArrayLiteral() {
     return std::optional{new ArrayLiteral{*token, parseExpressionList(TokenType::RBRACKET)}};
 }
 
-std::optional<Statement *> Parser::parseInfixExpression(std::optional<Statement *> left) {
+std::optional<Statement *> Parser::parseInfixExpression(const std::optional<Statement *> left) {
     const auto token = curToken;
     const auto op = token->literal;
     const auto precedence = currentPrecedence();
@@ -262,13 +262,13 @@ std::optional<Statement *> Parser::parseInfixExpression(std::optional<Statement 
     return std::optional{new InfixExpression(*token, left, op, right)};
 }
 
-std::optional<Statement *> Parser::parseCallExpression(std::optional<Statement *> left) {
+std::optional<Statement *> Parser::parseCallExpression(const std::optional<Statement *> left) {
     const auto token = curToken;
     const auto arguments = parseExpressionList(TokenType::RPAREN);
     return std::optional{new CallExpression(*token, left, arguments)};
 }
 
-std::optional<Statement *> Parser::parseIndexExpression(std::optional<Statement *> left) {
+std::optional<Statement *> Parser::parseIndexExpression(const std::optional<Statement *> left) {
     const auto token = curToken;
     nextToken();
     const auto index = parseExpression(Precedence::LOWEST);
