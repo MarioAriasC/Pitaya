@@ -288,4 +288,33 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         });
     }
 
+    BOOST_AUTO_TEST_CASE(testFunctionLiteral) {
+        const auto input = "fn(x, y) { x + y;}";
+        const auto program = createProgram(input);
+        countStatements(1, *program);
+        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        process(expression_statement->expression, [](Statement *st) {
+            const auto function = dynamic_cast<FunctionLiteral *>(st);
+            if (const auto opt_parameters = function->parameters; opt_parameters.has_value()) {
+                const auto parameters = opt_parameters.value();
+                testLiteralExpression(parameters[0], "x");
+                testLiteralExpression(parameters[1], "y");
+            } else {
+                BOOST_FAIL("empty parameters");
+            }
+            processT(function->body, [](const BlockStatement *body) {
+                if (const auto opt_statements = body->statements; opt_statements.has_value()) {
+                    const auto statements = opt_statements.value();
+                    BOOST_REQUIRE_EQUAL(1, statements.size());
+                    process(statements[0], [](Statement *sts) {
+                        const auto body_statement = dynamic_cast<ExpressionStatement *>(sts);
+                        testInfixExpression(body_statement->expression, "x", "+", "y");
+                    });
+                } else {
+                    BOOST_FAIL("empty body");
+                }
+            });
+        });
+    }
+
 BOOST_AUTO_TEST_SUITE_END()

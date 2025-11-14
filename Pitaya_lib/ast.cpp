@@ -210,3 +210,10 @@ std::string IfExpression::to_string() const {
     }
     return ss.str();
 }
+
+FunctionLiteral::FunctionLiteral(const Token &token,
+                                 const std::optional<std::vector<Identifier *> > &parameters,
+                                 const std::optional<BlockStatement *> body) : Statement(token),
+                                                                               parameters{parameters}, body{body},
+                                                                               name{""} {
+}

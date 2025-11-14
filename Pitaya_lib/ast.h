@@ -156,4 +156,14 @@ struct IfExpression : Statement {
     const std::optional<BlockStatement *> consequence;
     const std::optional<BlockStatement *> alternative;
 };
+
+struct FunctionLiteral : Statement {
+    FunctionLiteral(const Token &token,
+                    const std::optional<std::vector<Identifier *> > &parameters,
+                    std::optional<BlockStatement *> body);
+
+    const std::optional<std::vector<Identifier *> > parameters;
+    const std::optional<BlockStatement *> body;
+    std::string name;
+};
 #endif //PITAYA_AST_H

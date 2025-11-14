@@ -138,6 +138,8 @@ std::optional<PREFIX_FN_TYPE > Parser::prefixParser(const TokenType tt) {
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseArrayLiteral)};
         case TokenType::IF:
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseIfExpression)};
+        case TokenType::FUNCTION:
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseFunctionLiteral)};
         default:
             return std::nullopt;
     }
@@ -232,6 +234,27 @@ BlockStatement *Parser::parseBlockStatement() {
     return std::move(new BlockStatement{*token, std::optional{statements}});
 }
 
+std::optional<std::vector<Identifier *> > Parser::parseFunctionParameters() {
+    auto parameters = std::vector<Identifier *>{};
+    if (peekTokenIs(TokenType::RPAREN)) {
+        nextToken();
+        return std::optional{parameters};
+    }
+    nextToken();
+    const auto token = curToken;
+    parameters.push_back(new Identifier(*token, token->literal));
+    while (peekTokenIs(TokenType::COMMA)) {
+        nextToken();
+        nextToken();
+        const auto inner_token = curToken;
+        parameters.push_back(new Identifier(*inner_token, inner_token->literal));
+    }
+    if (!expectPeek(TokenType::RPAREN)) {
+        return std::nullopt;
+    }
+    return std::optional{parameters};
+}
+
 std::optional<Statement *> Parser::parseIntegerLiteral() {
     const auto token = curToken;
     const long value = std::stol(token->literal);
@@ -291,6 +314,19 @@ std::optional<Statement *> Parser::parseIfExpression() {
         alternative.emplace(parseBlockStatement());
     }
     return std::optional{new IfExpression{*token, condition, consequence, alternative}};
+}
+
+std::optional<Statement *> Parser::parseFunctionLiteral() {
+    const auto token = curToken;
+    if (!expectPeek(TokenType::LPAREN)) {
+        return std::nullopt;
+    }
+    const auto parameters = parseFunctionParameters();
+    if (!expectPeek(TokenType::LBRACE)) {
+        return std::nullopt;
+    }
+    const auto body = parseBlockStatement();
+    return std::optional{new FunctionLiteral(*token, parameters, body)};
 }
 
 std::optional<Statement *> Parser::parseInfixExpression(const std::optional<Statement *> left) {
