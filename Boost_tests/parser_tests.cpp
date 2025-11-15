@@ -5,6 +5,8 @@
 #include <utility>
 #include <variant>
 #include <iostream>
+#include <ranges>
+
 
 #include "parser.h"
 
@@ -69,6 +71,10 @@ void testIdentifier(const std::optional<Statement *> expression, const std::stri
         BOOST_REQUIRE_EQUAL(s, exp->value);
         BOOST_REQUIRE_EQUAL(s, exp->tokenLiteral());
     });
+}
+
+ExpressionStatement *extract(const Program *program) {
+    return dynamic_cast<ExpressionStatement *>(program->statements[0]);
 }
 
 #define VARIANT_TYPE std::variant<long, bool, std::string>
@@ -152,7 +158,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "foobar";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        const auto expression_statement = extract(program);
         process(expression_statement->expression, [](Statement *st) {
             const auto identifier = dynamic_cast<Identifier *>(st);
             BOOST_REQUIRE_EQUAL("foobar", identifier->value);
@@ -164,7 +170,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "5";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        const auto expression_statement = extract(program);
         testLongLiteral(expression_statement->expression, 5);
     }
 
@@ -179,7 +185,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         for (auto &[input, op, expected_value]: tests) {
             const auto program = createProgram(input);
             countStatements(1, *program);
-            const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+            const auto expression_statement = extract(program);
             process(expression_statement->expression, [&](Statement *exp) {
                 const auto expression = dynamic_cast<PrefixExpression *>(exp);
                 BOOST_REQUIRE_EQUAL(op, expression->op);
@@ -205,7 +211,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         for (auto &[input, left_value, op, right_value]: tests) {
             const auto program = createProgram(input);
             countStatements(1, *program);
-            const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+            const auto expression_statement = extract(program);
             process(expression_statement->expression, [&](Statement *exp) {
                 testInfixExpression(exp, left_value, op, right_value);
             });
@@ -257,7 +263,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         for (auto &[input, expected_value]: tests) {
             const auto program = createProgram(input);
             countStatements(1, *program);
-            const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+            const auto expression_statement = extract(program);
             testBooleanLiteral(expression_statement->expression, expected_value);
         }
     }
@@ -266,7 +272,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "if (x < y) {x}";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        const auto expression_statement = extract(program);
         process(expression_statement->expression, [](Statement *st) {
             const auto exp = dynamic_cast<IfExpression *>(st);
             testInfixExpression(exp->condition, "x", "<", "y");
@@ -279,7 +285,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "if (x < y) {x} else {y}";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        const auto expression_statement = extract(program);
         process(expression_statement->expression, [](Statement *st) {
             const auto exp = dynamic_cast<IfExpression *>(st);
             testInfixExpression(exp->condition, "x", "<", "y");
@@ -292,11 +298,11 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "fn(x, y) { x + y;}";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = dynamic_cast<ExpressionStatement *>(program->statements[0]);
+        const auto expression_statement = extract(program);
         process(expression_statement->expression, [](Statement *st) {
             const auto function = dynamic_cast<FunctionLiteral *>(st);
             if (const auto opt_parameters = function->parameters; opt_parameters.has_value()) {
-                const auto parameters = opt_parameters.value();
+                const auto &parameters = opt_parameters.value();
                 testLiteralExpression(parameters[0], "x");
                 testLiteralExpression(parameters[1], "y");
             } else {
@@ -304,7 +310,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             }
             processT(function->body, [](const BlockStatement *body) {
                 if (const auto opt_statements = body->statements; opt_statements.has_value()) {
-                    const auto statements = opt_statements.value();
+                    const auto &statements = opt_statements.value();
                     BOOST_REQUIRE_EQUAL(1, statements.size());
                     process(statements[0], [](Statement *sts) {
                         const auto body_statement = dynamic_cast<ExpressionStatement *>(sts);
@@ -315,6 +321,33 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
                 }
             });
         });
+    }
+
+    BOOST_AUTO_TEST_CASE(testFunctionParameters) {
+        const auto tests = {
+            std::tuple<std::string, std::initializer_list<std::string> >{"fn (){}", {}},
+            std::tuple<std::string, std::initializer_list<std::string> >{"fn (x){}", {"x"}},
+            std::tuple<std::string, std::initializer_list<std::string> >{"fn (x, y, z){}", {"x", "y", "z"}},
+        };
+
+        for (auto &[input, expected_parameters]: tests) {
+            const auto program = createProgram(input);
+            const auto expression_statement = extract(program);
+            process(expression_statement->expression, [expected_parameters](Statement *st) {
+                const auto function = dynamic_cast<FunctionLiteral *>(st);
+                if (const auto opt_parameters = function->parameters; opt_parameters.has_value()) {
+                    const auto &parameters = opt_parameters.value();
+                    BOOST_REQUIRE_EQUAL(parameters.size(), expected_parameters.size());
+                    int i = 0;
+                    for (auto p: expected_parameters) {
+                        testLiteralExpression(parameters[i], p);
+                        i++;
+                    }
+                } else {
+                    BOOST_FAIL("empty parameters");
+                }
+            });
+        }
     }
 
 BOOST_AUTO_TEST_SUITE_END()
