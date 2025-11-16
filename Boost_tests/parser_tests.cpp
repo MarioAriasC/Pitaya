@@ -350,4 +350,23 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         }
     }
 
+    BOOST_AUTO_TEST_CASE(testCallExpressionParsing) {
+        const auto input = "add(1, 2 * 3, 4+5)";
+        const auto program = createProgram(input);
+        countStatements(1, *program);
+        const auto expression_statement = extract(program);
+        process(expression_statement->expression, [](Statement *st) {
+            const auto call = dynamic_cast<CallExpression *>(st);
+            if (const auto opt_arguments = call->arguments; opt_arguments.has_value()) {
+                const auto& arguments = opt_arguments.value();
+                BOOST_REQUIRE_EQUAL(3, arguments.size());
+                testLiteralExpression(arguments[0], 1);
+                testInfixExpression(arguments[1], 2, "*", 3);
+                testInfixExpression(arguments[2], 4, "+", 5);
+            } else {
+                BOOST_FAIL("empty arguments");
+            }
+        });
+    }
+
 BOOST_AUTO_TEST_SUITE_END()
