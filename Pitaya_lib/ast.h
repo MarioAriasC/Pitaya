@@ -41,6 +41,10 @@ struct Identifier final : StringValue {
     Identifier(const Token &token, const std::string &value);
 };
 
+struct StringLiteral final :StringValue {
+    StringLiteral(const Token &token, const std::string &value);
+};
+
 struct LetStatement : Statement {
     LetStatement(const Token &token, Identifier name, std::optional<Statement *> value);
 

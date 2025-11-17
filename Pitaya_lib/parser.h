@@ -80,6 +80,8 @@ private:
 
     std::optional<Statement *> parseFunctionLiteral();
 
+    std::optional<Statement *> parseStringLiteral();
+
     // infix parsers
     std::optional<Statement *> parseInfixExpression(std::optional<Statement *> left);
 

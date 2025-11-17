@@ -140,6 +140,8 @@ std::optional<PREFIX_FN_TYPE > Parser::prefixParser(const TokenType tt) {
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseIfExpression)};
         case TokenType::FUNCTION:
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseFunctionLiteral)};
+        case TokenType::STRING:
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseStringLiteral)};
         default:
             return std::nullopt;
     }
@@ -327,6 +329,10 @@ std::optional<Statement *> Parser::parseFunctionLiteral() {
     }
     const auto body = parseBlockStatement();
     return std::optional{new FunctionLiteral(*token, parameters, body)};
+}
+
+std::optional<Statement *> Parser::parseStringLiteral() {
+    return std::optional{new StringLiteral(*curToken, curToken->literal)};
 }
 
 std::optional<Statement *> Parser::parseInfixExpression(const std::optional<Statement *> left) {

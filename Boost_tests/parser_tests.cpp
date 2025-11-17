@@ -369,4 +369,15 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         });
     }
 
+BOOST_AUTO_TEST_CASE(testStringLiteral) {
+    const auto input = "\"hello world\";";
+    const auto program = createProgram(input);
+    countStatements(1, *program);
+    const auto expression_statement = extract(program);
+    process(expression_statement->expression, [](Statement *st) {
+        const auto literal = dynamic_cast<StringLiteral *>(st);
+        BOOST_REQUIRE_EQUAL("hello world", literal->value);
+    });
+}
+
 BOOST_AUTO_TEST_SUITE_END()

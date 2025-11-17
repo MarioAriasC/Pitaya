@@ -217,3 +217,6 @@ FunctionLiteral::FunctionLiteral(const Token &token,
                                                                                parameters{parameters}, body{body},
                                                                                name{""} {
 }
+
+StringLiteral::StringLiteral(const Token &token, const std::string &value) : StringValue(token, value) {
+}
