@@ -281,9 +281,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "if (x < y) {x}";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = extract(program);
-        process(expression_statement->expression, [](Statement *st) {
-            const auto exp = dynamic_cast<IfExpression *>(st);
+        processCast<IfExpression *>(program, [](const auto *exp) {
             testInfixExpression(exp->condition, "x", "<", "y");
             testBlockStatement(exp->consequence, "x");
             BOOST_REQUIRE(exp->alternative == std::nullopt);
@@ -294,9 +292,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "if (x < y) {x} else {y}";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = extract(program);
-        process(expression_statement->expression, [](Statement *st) {
-            const auto exp = dynamic_cast<IfExpression *>(st);
+        processCast<IfExpression *>(program, [](const auto *exp) {
             testInfixExpression(exp->condition, "x", "<", "y");
             testBlockStatement(exp->consequence, "x");
             testBlockStatement(exp->alternative, "y");
@@ -307,9 +303,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "fn(x, y) { x + y;}";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = extract(program);
-        process(expression_statement->expression, [](Statement *st) {
-            const auto function = dynamic_cast<FunctionLiteral *>(st);
+        processCast<FunctionLiteral *>(program, [](const auto *function) {
             if (const auto opt_parameters = function->parameters; opt_parameters.has_value()) {
                 const auto &parameters = opt_parameters.value();
                 testLiteralExpression(parameters[0], "x");
@@ -341,9 +335,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
 
         for (auto &[input, expected_parameters]: tests) {
             const auto program = createProgram(input);
-            const auto expression_statement = extract(program);
-            process(expression_statement->expression, [expected_parameters](Statement *st) {
-                const auto function = dynamic_cast<FunctionLiteral *>(st);
+            processCast<FunctionLiteral *>(program, [expected_parameters](const auto *function) {
                 if (const auto opt_parameters = function->parameters; opt_parameters.has_value()) {
                     const auto &parameters = opt_parameters.value();
                     BOOST_REQUIRE_EQUAL(parameters.size(), expected_parameters.size());
@@ -363,9 +355,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "add(1, 2 * 3, 4+5)";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        const auto expression_statement = extract(program);
-        process(expression_statement->expression, [](Statement *st) {
-            const auto call = dynamic_cast<CallExpression *>(st);
+        processCast<CallExpression *>(program, [](const auto *call) {
             if (const auto opt_arguments = call->arguments; opt_arguments.has_value()) {
                 const auto &arguments = opt_arguments.value();
                 BOOST_REQUIRE_EQUAL(3, arguments.size());
@@ -382,26 +372,25 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "\"hello world\";";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        processCast<StringLiteral *>(program, [](const StringLiteral *literal) {
+        processCast<StringLiteral *>(program, [](const auto *literal) {
             BOOST_REQUIRE_EQUAL("hello world", literal->value);
         });
-
     }
 
     BOOST_AUTO_TEST_CASE(testParsingArrayLiteral) {
-    const auto input = "[1, 2 * 2, 3 + 3]";
-    const auto program = createProgram(input);
-    countStatements(1, *program);
-    processCast<ArrayLiteral *>(program, [](const ArrayLiteral *array) {
-       if (array->elements.has_value()) {
-           const auto elements = array->elements.value();
-           testLongLiteral(elements[0], 1);
-           testInfixExpression(elements[1], 2 , "*", 2);
-           testInfixExpression(elements[2], 3 , "+", 3);
-       } else {
-           BOOST_FAIL("array is null");
-       }
-    });
+        const auto input = "[1, 2 * 2, 3 + 3]";
+        const auto program = createProgram(input);
+        countStatements(1, *program);
+        processCast<ArrayLiteral *>(program, [](const auto *array) {
+            if (array->elements.has_value()) {
+                const auto elements = array->elements.value();
+                testLongLiteral(elements[0], 1);
+                testInfixExpression(elements[1], 2, "*", 2);
+                testInfixExpression(elements[2], 3, "+", 3);
+            } else {
+                BOOST_FAIL("array is null");
+            }
+        });
     }
 
 BOOST_AUTO_TEST_SUITE_END()
