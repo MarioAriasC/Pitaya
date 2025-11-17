@@ -48,6 +48,19 @@ void process(std::optional<Statement *> o, const Fn &fn) {
     processT(o, fn);
 }
 
+ExpressionStatement *extract(const Program *program) {
+    return dynamic_cast<ExpressionStatement *>(program->statements[0]);
+}
+
+template<typename T, typename Fn>
+void processCast(const Program *program, const Fn &fn) {
+    const auto es = extract(program);
+    process(es->expression, [fn](Statement *st) {
+        const auto t = dynamic_cast<T>(st);
+        fn(t);
+    });
+}
+
 
 void testLongLiteral(const std::optional<Statement *> expression, const long l) {
     process(expression, [l](Statement *st) {
@@ -71,10 +84,6 @@ void testIdentifier(const std::optional<Statement *> expression, const std::stri
         BOOST_REQUIRE_EQUAL(s, exp->value);
         BOOST_REQUIRE_EQUAL(s, exp->tokenLiteral());
     });
-}
-
-ExpressionStatement *extract(const Program *program) {
-    return dynamic_cast<ExpressionStatement *>(program->statements[0]);
 }
 
 #define VARIANT_TYPE std::variant<long, bool, std::string>
@@ -358,7 +367,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         process(expression_statement->expression, [](Statement *st) {
             const auto call = dynamic_cast<CallExpression *>(st);
             if (const auto opt_arguments = call->arguments; opt_arguments.has_value()) {
-                const auto& arguments = opt_arguments.value();
+                const auto &arguments = opt_arguments.value();
                 BOOST_REQUIRE_EQUAL(3, arguments.size());
                 testLiteralExpression(arguments[0], 1);
                 testInfixExpression(arguments[1], 2, "*", 3);
@@ -369,15 +378,30 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         });
     }
 
-BOOST_AUTO_TEST_CASE(testStringLiteral) {
-    const auto input = "\"hello world\";";
+    BOOST_AUTO_TEST_CASE(testStringLiteral) {
+        const auto input = "\"hello world\";";
+        const auto program = createProgram(input);
+        countStatements(1, *program);
+        processCast<StringLiteral *>(program, [](const StringLiteral *literal) {
+            BOOST_REQUIRE_EQUAL("hello world", literal->value);
+        });
+
+    }
+
+    BOOST_AUTO_TEST_CASE(testParsingArrayLiteral) {
+    const auto input = "[1, 2 * 2, 3 + 3]";
     const auto program = createProgram(input);
     countStatements(1, *program);
-    const auto expression_statement = extract(program);
-    process(expression_statement->expression, [](Statement *st) {
-        const auto literal = dynamic_cast<StringLiteral *>(st);
-        BOOST_REQUIRE_EQUAL("hello world", literal->value);
+    processCast<ArrayLiteral *>(program, [](const ArrayLiteral *array) {
+       if (array->elements.has_value()) {
+           const auto elements = array->elements.value();
+           testLongLiteral(elements[0], 1);
+           testInfixExpression(elements[1], 2 , "*", 2);
+           testInfixExpression(elements[2], 3 , "+", 3);
+       } else {
+           BOOST_FAIL("array is null");
+       }
     });
-}
+    }
 
 BOOST_AUTO_TEST_SUITE_END()
