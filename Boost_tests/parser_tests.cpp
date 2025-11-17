@@ -61,7 +61,6 @@ void processCast(const Program *program, const Fn &fn) {
     });
 }
 
-
 void testLongLiteral(const std::optional<Statement *> expression, const long l) {
     process(expression, [l](Statement *st) {
         const auto exp = dynamic_cast<IntegerLiteral *>(st);
@@ -369,10 +368,10 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
     }
 
     BOOST_AUTO_TEST_CASE(testStringLiteral) {
-        const auto input = "\"hello world\";";
+        const auto input = R"("hello world";)";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        processCast<StringLiteral *>(program, [](const auto *literal) {
+        processCast<StringLiteral *>(program, [](const StringLiteral *literal) {
             BOOST_REQUIRE_EQUAL("hello world", literal->value);
         });
     }
@@ -381,7 +380,7 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
         const auto input = "[1, 2 * 2, 3 + 3]";
         const auto program = createProgram(input);
         countStatements(1, *program);
-        processCast<ArrayLiteral *>(program, [](const auto *array) {
+        processCast<ArrayLiteral *>(program, [](const ArrayLiteral *array) {
             if (array->elements.has_value()) {
                 const auto elements = array->elements.value();
                 testLongLiteral(elements[0], 1);
@@ -392,5 +391,33 @@ BOOST_AUTO_TEST_SUITE(Parser_suite)
             }
         });
     }
+
+    BOOST_AUTO_TEST_CASE(testIndexExpression) {
+        const auto input = "myArray[1 + 1]";
+        const auto program = createProgram(input);
+        processCast<IndexExpression *>(program, [](const IndexExpression *index) {
+            testIdentifier(index->left, "myArray");
+            testInfixExpression(index->index, 1, "+", 1);
+        });
+    }
+
+    BOOST_AUTO_TEST_CASE(testHashlLiteral) {
+    const auto input = R"({"one": 1, "two": 2, "three":3 })";
+    const auto program = createProgram(input);
+    processCast<HashLiteral *>(program, [](const HashLiteral *hash) {
+        BOOST_REQUIRE_EQUAL(3, hash->pairs.size());
+        const auto expected = std::map<std::string, int>{
+            {"one", 1},
+            {"two", 2},
+            {"three", 3},
+        };
+        for (auto &[key, value]: hash->pairs){
+            const auto literal = dynamic_cast<StringLiteral *>(key);
+            const auto expected_value = expected.at(literal->to_string());
+            testLiteralExpression(std::optional{value}, expected_value);
+        }
+    });
+
+}
 
 BOOST_AUTO_TEST_SUITE_END()

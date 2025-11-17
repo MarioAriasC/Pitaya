@@ -64,11 +64,11 @@ private:
     std::optional<std::vector<Identifier *>> parseFunctionParameters();
 
     // prefix parsers
-    std::optional<Statement *> parseIntegerLiteral();
+    std::optional<Statement *> parseIntegerLiteral() const;
 
-    std::optional<Statement *> parseIdentifier();
+    std::optional<Statement *> parseIdentifier() const;
 
-    std::optional<Statement *> parseBooleanLiteral();
+    std::optional<Statement *> parseBooleanLiteral() const;
 
     std::optional<Statement *> parsePrefixExpression();
 
@@ -80,7 +80,9 @@ private:
 
     std::optional<Statement *> parseFunctionLiteral();
 
-    std::optional<Statement *> parseStringLiteral();
+    std::optional<Statement *> parseStringLiteral() const;
+
+    std::optional<Statement *> parseHashLiteral();
 
     // infix parsers
     std::optional<Statement *> parseInfixExpression(std::optional<Statement *> left);

@@ -142,6 +142,8 @@ std::optional<PREFIX_FN_TYPE > Parser::prefixParser(const TokenType tt) {
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseFunctionLiteral)};
         case TokenType::STRING:
             return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseStringLiteral)};
+        case TokenType::LBRACE:
+            return std::optional{static_cast<PREFIX_FN_TYPE>(&Parser::parseHashLiteral)};
         default:
             return std::nullopt;
     }
@@ -257,17 +259,17 @@ std::optional<std::vector<Identifier *> > Parser::parseFunctionParameters() {
     return std::optional{parameters};
 }
 
-std::optional<Statement *> Parser::parseIntegerLiteral() {
+std::optional<Statement *> Parser::parseIntegerLiteral() const {
     const auto token = curToken;
     const long value = std::stol(token->literal);
     return std::optional{new IntegerLiteral(*token, value)};
 }
 
-std::optional<Statement *> Parser::parseIdentifier() {
+std::optional<Statement *> Parser::parseIdentifier() const {
     return std::optional{new Identifier(*curToken, curToken->literal)};
 }
 
-std::optional<Statement *> Parser::parseBooleanLiteral() {
+std::optional<Statement *> Parser::parseBooleanLiteral() const {
     return std::optional{new BooleanLiteral(*curToken, curTokenIs(TokenType::TRUE))};
 }
 
@@ -331,8 +333,32 @@ std::optional<Statement *> Parser::parseFunctionLiteral() {
     return std::optional{new FunctionLiteral(*token, parameters, body)};
 }
 
-std::optional<Statement *> Parser::parseStringLiteral() {
+std::optional<Statement *> Parser::parseStringLiteral() const {
     return std::optional{new StringLiteral(*curToken, curToken->literal)};
+}
+
+std::optional<Statement *> Parser::parseHashLiteral() {
+    const auto token = curToken;
+    auto pairs = std::map<Statement *, Statement *>();
+    while (!peekTokenIs(TokenType::RBRACE)) {
+        nextToken();
+        const auto key = parseExpression(Precedence::LOWEST);
+        if (!expectPeek(TokenType::COLON)) {
+            return std::nullopt;
+        }
+        nextToken();
+        const auto value = parseExpression(Precedence::LOWEST);
+        if (key.has_value() && value.has_value()) {
+            pairs[key.value()] = value.value();
+        }
+        if (!peekTokenIs(TokenType::RBRACE) && !expectPeek(TokenType::COMMA)) {
+            return std::nullopt;
+        }
+    }
+    if (!expectPeek(TokenType::RBRACE)) {
+        return std::nullopt;
+    }
+    return std::optional{new HashLiteral{*token, pairs}};
 }
 
 std::optional<Statement *> Parser::parseInfixExpression(const std::optional<Statement *> left) {

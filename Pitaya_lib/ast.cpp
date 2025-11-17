@@ -7,19 +7,8 @@
 #include <sstream>
 #include <utility>
 #include <boost/algorithm/string/join.hpp>
-// #define EQ return ASTUtil::equalsImpl(lhs, rhs);
-// #define NOT_EQ return !(lhs == rhs);
-//
+
 namespace ASTUtil {
-    /*template<typename T>
-    bool equalsImpl(T &lhs, T &rhs) {
-        if (typeid(lhs) != typeid(rhs)) return false;
-        std::stringstream l;
-        std::stringstream r;
-        l << lhs;
-        r << rhs;
-        return l.str() == r.str();
-    }*/
     std::string to_string(std::optional<Statement *> op) {
         return op.transform([](const Statement *st) {
             return st->to_string();
@@ -48,6 +37,10 @@ std::string Statement::tokenLiteral() const {
 
 std::string Statement::to_string() const {
     return "Statement";
+}
+
+bool Statement::operator<(const Statement &s) const {
+    return to_string() < s.to_string();
 }
 
 Program::Program(const std::vector<Statement *> &statements) : statements{statements} {
@@ -219,4 +212,8 @@ FunctionLiteral::FunctionLiteral(const Token &token,
 }
 
 StringLiteral::StringLiteral(const Token &token, const std::string &value) : StringValue(token, value) {
+}
+
+HashLiteral::HashLiteral(const Token &token, const std::map<Statement *, Statement *> &pairs) : Statement(token),
+    pairs{pairs} {
 }

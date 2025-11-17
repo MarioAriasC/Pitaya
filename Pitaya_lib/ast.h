@@ -1,9 +1,11 @@
 #ifndef PITAYA_AST_H
 #define PITAYA_AST_H
 
+#include <map>
 #include <string>
 #include <vector>
 #include <optional>
+
 #include "tokens.h"
 
 #define OPT_STATEMENT_LIST std::optional<std::vector<std::optional<Statement *> > >
@@ -19,6 +21,8 @@ struct Statement {
     [[nodiscard]] std::string tokenLiteral() const;
 
     [[nodiscard]] virtual std::string to_string() const;
+
+    bool operator<(const Statement &s) const;
 };
 
 struct Program {
@@ -45,7 +49,7 @@ struct StringLiteral final :StringValue {
     StringLiteral(const Token &token, const std::string &value);
 };
 
-struct LetStatement : Statement {
+struct LetStatement final : Statement {
     LetStatement(const Token &token, Identifier name, std::optional<Statement *> value);
 
     [[nodiscard]] std::string to_string() const override;
@@ -54,7 +58,7 @@ struct LetStatement : Statement {
     const std::optional<Statement *> value;
 };
 
-struct ReturnStatement : Statement {
+struct ReturnStatement final : Statement {
     ReturnStatement(const Token &token, const std::optional<Statement *> &returnValue);
 
     [[nodiscard]] std::string to_string() const override;
@@ -62,7 +66,7 @@ struct ReturnStatement : Statement {
     const std::optional<Statement *> returnValue;
 };
 
-struct ExpressionStatement : Statement {
+struct ExpressionStatement final : Statement {
     ExpressionStatement(const Token &token, const std::optional<Statement *> &expression);
 
     [[nodiscard]] std::string to_string() const override;
@@ -90,7 +94,7 @@ struct BooleanLiteral final : LiteralExpression<bool> {
     [[nodiscard]] std::string to_string() const override;
 };
 
-struct PrefixExpression : Statement {
+struct PrefixExpression final : Statement {
     PrefixExpression(const Token &token, std::string op, std::optional<Statement *> right);
 
     [[nodiscard]] std::string to_string() const override;
@@ -99,7 +103,7 @@ struct PrefixExpression : Statement {
     const std::optional<Statement *> right;
 };
 
-struct InfixExpression : Statement {
+struct InfixExpression final : Statement {
     InfixExpression(const Token &token,
                     std::optional<Statement *> left,
                     std::string op,
@@ -112,7 +116,7 @@ struct InfixExpression : Statement {
     const std::optional<Statement *> right;
 };
 
-struct CallExpression : Statement {
+struct CallExpression final : Statement {
     CallExpression(const Token &token,
                    std::optional<Statement *> function,
                    const OPT_STATEMENT_LIST &arguments);
@@ -123,7 +127,7 @@ struct CallExpression : Statement {
     const OPT_STATEMENT_LIST arguments;
 };
 
-struct ArrayLiteral : Statement {
+struct ArrayLiteral final : Statement {
     ArrayLiteral(const Token &token, const OPT_STATEMENT_LIST &elements);
 
     [[nodiscard]] std::string to_string() const override;
@@ -131,7 +135,7 @@ struct ArrayLiteral : Statement {
     const OPT_STATEMENT_LIST elements;
 };
 
-struct IndexExpression : Statement {
+struct IndexExpression final : Statement {
     IndexExpression(const Token &token, std::optional<Statement *> left, std::optional<Statement *> index);
 
     [[nodiscard]] std::string to_string() const override;
@@ -140,7 +144,7 @@ struct IndexExpression : Statement {
     const std::optional<Statement *> index;
 };
 
-struct BlockStatement : Statement {
+struct BlockStatement final : Statement {
     BlockStatement(const Token &token, const OPT_STATEMENT_LIST &statements);
 
     [[nodiscard]] std::string to_string() const override;
@@ -148,7 +152,7 @@ struct BlockStatement : Statement {
     const OPT_STATEMENT_LIST statements;
 };
 
-struct IfExpression : Statement {
+struct IfExpression final : Statement {
     IfExpression(const Token &token,
                  std::optional<Statement *> condition,
                  std::optional<BlockStatement *> consequence,
@@ -161,7 +165,7 @@ struct IfExpression : Statement {
     const std::optional<BlockStatement *> alternative;
 };
 
-struct FunctionLiteral : Statement {
+struct FunctionLiteral final : Statement {
     FunctionLiteral(const Token &token,
                     const std::optional<std::vector<Identifier *> > &parameters,
                     std::optional<BlockStatement *> body);
@@ -169,5 +173,10 @@ struct FunctionLiteral : Statement {
     const std::optional<std::vector<Identifier *> > parameters;
     const std::optional<BlockStatement *> body;
     std::string name;
+};
+
+struct HashLiteral final :Statement {
+    HashLiteral(const Token &token, const std::map<Statement *, Statement *> &pairs);
+    const std::map<Statement *, Statement *> pairs;
 };
 #endif //PITAYA_AST_H
